@@ -29,6 +29,7 @@ var myCollection;
 var myCollections = {};
 var mDB;
 
+// HARD CODED THE CHOICE OF DATABASE SWITCH THE NEXT TWO LINES, comment/uncomment if you have local mongodb installed
  mDB = secrets.mongodb.connectionStr(); // cloud // these two lines can be improved how?
 //mDB = secrets.mongodb.connectionStrLocalhost();
 
@@ -36,7 +37,7 @@ var mDB;
 var db = MongoClient.connect(mDB, function(err, db) {
     if(err)
         throw err;
-    console.log("connected to the mongoDB at: " + platform.mongodb);
+    console.log("connected to the mongoDB at: " + mDB);
 	
 	//myCollection = db.collection('students'); // creates the collection if it does not exist
 	myCollections.students = db.collection('students'); 
