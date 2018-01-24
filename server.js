@@ -33,6 +33,9 @@ var mDB;
  mDB = secrets.mongodb.connectionStr(); // cloud // these two lines can be improved how?
 //mDB = secrets.mongodb.connectionStrLocalhost();
 
+console.log("Have you configured the mongoDB connection correctly?");
+console.log("Connecting to: " + mDB);
+
 // could move the connect string settings to secrets
 var db = MongoClient.connect(mDB, function(err, db) {
     if(err)
