@@ -1,9 +1,13 @@
-# December 2016 monogodb Demo
+## mongodb-example-4-ngclient
+#### mongoDB basic CRUD 
+
+Cloud demos (if deployed) at:
+1. [Heroku](https://mongodb-example-4-ngclient.herokuapp.com/#/students) 
 
 A nodejs application template/shell that is designed to run on:
 
 1. localhost   
-2. IBM Bluemix 
+2. IBM Bluemix    (research and rename appropriately if required from servergeneric*)
 3. Heroku
 
 The server uses express and the client side angular.
@@ -38,19 +42,7 @@ Ideally keys should be deployed in the cloud via environment variables/services.
 
 As node server.js after doing a npm update. 
 
-### Bluemix
-
-https://console.ng.bluemix.net/docs/cli/index.html#cli
-
-_login_bluemix.bat allows a login to a bluemix account, edit with your account settings.
-
-_deploy_bluemix.bat pushes the application to bluemix, i.e. these commands in a .bat file.
-
-    cf login -u XXXXX -o YYYYYY -s dev
-	cf push servergeneric -f ./manifest.yml  --no-start
-	cf enable-diego servergeneric
-	cf start servergeneric
-	
+ 
 ### heroku
 
 https://devcenter.heroku.com/categories/command-line
