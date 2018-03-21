@@ -1,6 +1,4 @@
-console.log("This code is designed to present to run on localhost/bluemix/heroku with the relevant hostname:port");
-console.log("./routes/server_nodejs/platform.js: to set specific values such as bluemix url etc.");
-
+ 
 var host_uri = "localhost"; // 
 
 var express = require('express');
@@ -27,15 +25,47 @@ var secrets  = require('./secrets.js');
 var myCollection;
 
 var myCollections = {};
-var mDB;
+var connectURL;
 
 // HARD CODED THE CHOICE OF DATABASE SWITCH THE NEXT TWO LINES, comment/uncomment if you have local mongodb installed
- mDB = secrets.mongodb.connectionStr(); // cloud // these two lines can be improved how?
-//mDB = secrets.mongodb.connectionStrLocalhost();
+ connectURL = secrets.mongodb.connectionStr(); // cloud // these two lines can be improved how?
+//connectURL = secrets.mongodb.connectionStrLocalhost();
 
 console.log("Have you configured the mongoDB connection correctly?");
 console.log("Connecting to: " + mDB);
 
+
+MongoClient.connect(connectURL)
+		.then(client => {
+				console.log("connected to the mongoDB using ^3.0.4");
+				myCollections.students = client.db('testing01').collection('students');
+				myCollections.courses = client.db('testing01').collection('courses');
+ 
+ 
+				try { // there is no rest endpoints for this example on courses just run with no error checking
+					myCollections.courses.deleteMany( {}, function(err, result)
+					{
+					myCollections.courses.insert([{'a':'alpha'}, {'a':'beta'}], function(err, result) {
+						if (!err)
+							{
+								console.log("test data to courses inserted");
+							}
+						});	 
+					});
+				} catch (e) {
+						console.log(e);  
+				}
+  
+		})
+		.catch( error => {		 
+				console.log(error);				 
+			})
+
+
+
+
+
+/*
 // could move the connect string settings to secrets
 var db = MongoClient.connect(mDB, function(err, db) {
     if(err)
@@ -47,7 +77,7 @@ var db = MongoClient.connect(mDB, function(err, db) {
 	
 	myCollections.courses = db.collection('courses'); 
 	
-	// proof of concept only with courses, lets add some data, use robmongo do check it works.
+	// proof of concept only with courses, lets add some data, use rob 3T do check it works.
 	
 	try { // there is no rest endpoints for this example on courses just run with no error checking
 		myCollections.courses.deleteMany( {}, function(err, result)
@@ -64,6 +94,7 @@ var db = MongoClient.connect(mDB, function(err, db) {
 	}	
 });
  
+*/
 var connectionListener = false;
 
 var app = express();
@@ -201,6 +232,26 @@ app.delete('/api/v1/student/:_id', function(req, res) {
 app.put('/api/v1/student', function(req, res) {   
     console.log('PUT /api/v1/student');
 	console.log(req.body);
+	
+	
+	
+  	findStudents( {},  function(err, results) {	 
+	if(err)
+		{	// throw err;
+			console.log("error:");
+			console.log(err.message);
+			res.status(404);
+			res.json({"error": err.message});
+		} 
+
+	console.log("total students so far: " + results.length);
+	
+	if (results.length < 100)
+	{
+		// add one student
+		
+console.log(req.body);
+		
 	myCollections.students.insert(req.body, function(err, result) {
     if(err)
 	{   // throw err;
@@ -213,10 +264,26 @@ app.put('/api/v1/student', function(req, res) {
        console.log("student entry saved");
    	   res.status(200);
 	   res.json(result);	    
+	});	
+
+
+		
+	}
+	else
+	{
+			res.status(404);
+			return res.json({"msg": "too many students"});		
+	}
+ 
+
 	});		
+ 
+ 	
+ 	
+	
 });	
 
-app.post('/api/v1/student', function(req, res) {   // update a student
+app.post('/api/v1/student', function(req, res) {   // update a student THIS SHOULD BE PUT, swap
     console.log('POST /api/v1/student');
 	console.log(req.body);	
 	var _id = req.body._id;
@@ -264,6 +331,9 @@ app.post('/api/v1/students', function(req, res) { // need the post method to pas
 
 app.post('/api/v1/loadstudents', function(req, res) { // API restful semantic issues i.e. loadstudents
     console.log('POST /api/v1/loadstudents');	 
+	
+	// only insert if max < 100
+	
 	var records = [
 		{ "name" : "bloggs, joseph", "course" : "applied", "year" : 1 },
 		{ "name" : "bloggs, thomas", "course" : "ssd", "year" : 2 },
@@ -289,20 +359,58 @@ app.post('/api/v1/loadstudents', function(req, res) { // API restful semantic is
 	var errorFlag = false;  // can use for feedback
 	var insertCount = 0;
 	
-	records.forEach( function (arrayItem)
+	
+  	findStudents( {},  function(err, results) {	 
+	if(err)
+		{	// throw err;
+			console.log("error:");
+			console.log(err.message);
+			res.status(404);
+			res.json({"error": err.message});
+		} 
+
+	console.log("total students so far: " + results.length);
+	
+	if (results.length < 100)
 	{
-		myCollections.students.insert( arrayItem, function(err, result) {
-			if(err)
-			{
-				errorFlag = true;
-			}
-			insertCount++;
-		});
-	});	 
+		// add this set of students
+		
+		records.forEach( function (arrayItem)
+		{
+			myCollections.students.insert( arrayItem, function(err, result) {
+				if(err)
+				{
+					errorFlag = true;
+				}
+				insertCount++;
+			});
+		});		
+
+	// BAD
+ 
+	// need to turn this into promises
+	// this would need to be set after confirmation of the loop which has aysnch call
+	
+	console.log("EXPLAIN WHY THIS IS WRONG, insertCount is not available yet!!!!");
 	var result = {'errorFlag' : errorFlag , 'insertCount' : insertCount};
+ 
 	console.log(result)
 	res.status(200);
-	res.json(result); 
+	res.json(result);
+
+
+		
+	}
+	else
+	{
+			res.status(404);
+			return res.json({"msg": "too many students"});		
+	}
+ 
+
+	});		
+ 
+ 
 });
 
 app.delete('/api/v1/deletestudents', function(req, res) {  

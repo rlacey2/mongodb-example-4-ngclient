@@ -1,19 +1,17 @@
-## mongodb-example-4-ngclient
-#### mongoDB basic CRUD 
+# December 2017 monogodb Demo
 
-Cloud demos (if deployed) at:
-1. [Heroku](https://mongodb-example-4-ngclient.herokuapp.com/#/students) 
+Limited to 119 students maximum.
 
 A nodejs application template/shell that is designed to run on:
 
 1. localhost   
-2. IBM Bluemix    (research and rename appropriately if required from servergeneric*)
+2. IBM Bluemix 
 3. Heroku
 
 The server uses express and the client side angular.
 
 
-You will need to configure your mongodb database along with user permissions. In secrets.js you can configure the connection strings in the mongodb section. In server.js uncomment/comment the appropriate line 'var mDB = ****' for the connection string.
+You will need to configure your mongodb database along with user permissions. In secrets.js you can configure the MONGODB connection strings in the mongodb section. In server.js uncomment/comment the appropriate line 'var mDB = ****' for the connection string.
 
 https://robomongo.org/ is one GUI for mongodb.
 
@@ -42,7 +40,19 @@ Ideally keys should be deployed in the cloud via environment variables/services.
 
 As node server.js after doing a npm update. 
 
- 
+### Bluemix
+
+https://console.ng.bluemix.net/docs/cli/index.html#cli
+
+_login_bluemix.bat allows a login to a bluemix account, edit with your account settings.
+
+_deploy_bluemix.bat pushes the application to bluemix, i.e. these commands in a .bat file.
+
+    cf login -u XXXXX -o YYYYYY -s dev
+	cf push servergeneric -f ./manifest.yml  --no-start
+	cf enable-diego servergeneric
+	cf start servergeneric
+	
 ### heroku
 
 https://devcenter.heroku.com/categories/command-line
