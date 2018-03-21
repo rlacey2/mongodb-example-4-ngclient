@@ -11,7 +11,7 @@ A nodejs application template/shell that is designed to run on:
 The server uses express and the client side angular.
 
 
-You will need to configure your mongodb database along with user permissions. In secrets.js you can configure the MONGODB connection strings in the mongodb section. In server.js uncomment/comment the appropriate line 'var mDB = ****' for the connection string.
+You will need to configure your mongodb database along with user permissions. In secrets.js ;ine ~94 you can configure the MONGODB connection strings in the mongodb section. In server.js uncomment/comment the appropriate line 'var connectURL = ****' for the connection string.
 
 https://robomongo.org/ is one GUI for mongodb.
 
