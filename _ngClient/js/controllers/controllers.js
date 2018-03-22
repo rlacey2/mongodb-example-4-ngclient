@@ -75,7 +75,7 @@ appControllers.controller('StudentsCtrl', [  '$scope', '$resource', '$http',  '$
 								displayStudents({});								
 								nrzLightify({ type: 'success', text: 'student inserted'  }, 3000);	
 							}, function errorCallback(error) {
-                               nrzLightify({ type: 'danger', text: 'student insertion error'  }, 3000);							 						 
+                               nrzLightify({ type: 'danger', text: error.data.msg  }, 3000);							 						 
 						}); 		
 		}
 		

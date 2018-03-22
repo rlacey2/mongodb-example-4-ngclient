@@ -14,7 +14,8 @@ var bodyParser = require('body-parser');
 // you can research all the commented out features and 'npm install --save' as required
 var helmet = require('helmet'); // Helmet helps you secure your Express apps by setting various HTTP headers. It's not a silver bullet, but it can help!
 var path = require('path');
-//var logger = require('morgan');
+var morgan = require('morgan');
+
  
 // developer code
 var platform = require('./node_server/platform.js').configure();
@@ -30,9 +31,9 @@ var connectURL;
 // HARD CODED THE CHOICE OF DATABASE SWITCH THE NEXT TWO LINES, comment/uncomment if you have local mongodb installed
  connectURL = secrets.mongodb.connectionStr(); // cloud // these two lines can be improved how?
 //connectURL = secrets.mongodb.connectionStrLocalhost();
-
+ 
 console.log("Have you configured the mongoDB connection correctly?");
-console.log("Connecting to: " + mDB);
+console.log("Connecting to: " + connectURL);
 
 
 MongoClient.connect(connectURL)
@@ -41,63 +42,18 @@ MongoClient.connect(connectURL)
 				myCollections.students = client.db('testing01').collection('students');
 				myCollections.courses = client.db('testing01').collection('courses');
  
- 
-				try { // there is no rest endpoints for this example on courses just run with no error checking
-					myCollections.courses.deleteMany( {}, function(err, result)
-					{
-					myCollections.courses.insert([{'a':'alpha'}, {'a':'beta'}], function(err, result) {
-						if (!err)
-							{
-								console.log("test data to courses inserted");
-							}
-						});	 
-					});
-				} catch (e) {
-						console.log(e);  
-				}
-  
 		})
 		.catch( error => {		 
 				console.log(error);				 
 			})
-
-
-
-
-
-/*
-// could move the connect string settings to secrets
-var db = MongoClient.connect(mDB, function(err, db) {
-    if(err)
-        throw err;
-    console.log("connected to the mongoDB at: " + mDB);
-	
-	//myCollection = db.collection('students'); // creates the collection if it does not exist
-	myCollections.students = db.collection('students'); 
-	
-	myCollections.courses = db.collection('courses'); 
-	
-	// proof of concept only with courses, lets add some data, use rob 3T do check it works.
-	
-	try { // there is no rest endpoints for this example on courses just run with no error checking
-		myCollections.courses.deleteMany( {}, function(err, result)
-		{
-		myCollections.courses.insert([{'a':'alpha'}, {'a':'beta'}], function(err, result) {
-            if (!err)
-				{
-					console.log("test data to courses inserted");
-				}
-			});	 
-		});
-	} catch (e) {
-			console.log(e);  
-	}	
-});
  
-*/
+ 
 var connectionListener = false;
 
 var app = express();
+
+ 
+app.use(morgan("dev", {}));
 //app.use(logger('dev'));  // log every request to the console   morgan 	
 app.use(compression()); // must be first, GZIP all assets https://www.sitepoint.com/5-easy-performance-tweaks-node-js-express/
 app.use(bodyParser.urlencoded({'extended':'true'}));            // parse application/x-www-form-urlencoded
@@ -191,119 +147,101 @@ app.all('/*', function(req, res, next) {
 // causes two authenications app.all('/api/v1/admin/*', [require('./middlewares/validateRequest').validateRequest]);
 //app.all('/api/v1/*', [require('./routes/middlewares/validateRequest').validateRequest]);
 
-function findStudents(findOptions, cb) {
-        myCollections.students.find(findOptions).toArray(cb);
+function findStudents(findOptions, cb) {  // promise returned
+        return myCollections.students.find(findOptions).toArray(cb);
     }
  
-function getStudents(req, res, findOptions, cb) {
-  	findStudents( findOptions,  function(err, results) {	 
-	if(err)
-		{	// throw err;
+function getStudents(req, res, findOptions, cb) { // promises
+	
+	findStudents( findOptions)
+		  .then( results => {
+			res.status(200);
+			res.json(results);		 
+		  })
+		  .catch ( err => {
 			console.log("error:");
 			console.log(err.message);
 			res.status(404);
 			res.json({"error": err.message});
-		} 
-	// console.log(results);		 
-	res.status(200);
-	res.json(results);	
-	});
+		  });	
     } 
 
-app.delete('/api/v1/student/:_id', function(req, res) {  
+app.delete('/api/v1/student/:_id', function(req, res) {   // promises
     console.log('DELETE /api/v1/student');
 	console.log(req.params._id);
-	myCollections.students.deleteOne({  _id  :  ObjectID(req.params._id)}  , function(err, result) {
-    if(err)
-	{   // throw err;
-		console.log("error:");
-		console.log(err.message);
-		res.status(404);
-		res.json({"error": err.message});		
-	}        
-    if(!err) 
-       console.log("student entry deleted");
-   	   res.status(200);
-	   console.log(JSON.stringify(result))
-	   res.json(result);	    
-	});			
+	myCollections.students.deleteOne({  _id  :  ObjectID(req.params._id)})
+		  .then( result => {
+			   console.log("student entry deleted");
+			   res.status(200);
+			   console.log(JSON.stringify(result))
+			   res.json(result);
+		  })
+		  .catch ( err => {
+				console.log("error:");
+				console.log(err.message);
+				res.status(404);
+				res.json({"error": err.message});	
+		  });	 
+ 
 });
 	
-app.put('/api/v1/student', function(req, res) {   
+app.put('/api/v1/student', function(req, res) {   // promises - one single student
     console.log('PUT /api/v1/student');
 	console.log(req.body);
 	
-	
-	
-  	findStudents( {},  function(err, results) {	 
-	if(err)
-		{	// throw err;
-			console.log("error:");
+	findStudents({})
+		  .then( results => {
+			console.log("total students so far: " + results.length);	 
+			if (results.length < 119)
+				{
+					// add one student
+ 
+					 myCollections.students.insert(req.body);   // chaining issue so nestto the next then	 
+				}
+			else
+			{
+				throw new Error("too many students, single insert denied");
+			//	res.status(404);
+			//	return res.json({"msg": "too many students, single insert denied"});	
+			}
+		  })
+		  .then( result => {   //
+					   console.log("student entry saved via put");
+					   res.status(200);
+					   return res.json({"msg": "new student saved"});
+		  })
+		  .catch ( err => {
+			console.log("catch error:");
 			console.log(err.message);
+			 		
 			res.status(404);
-			res.json({"error": err.message});
-		} 
-
-	console.log("total students so far: " + results.length);
-	
-	if (results.length < 100)
-	{
-		// add one student
-		
-console.log(req.body);
-		
-	myCollections.students.insert(req.body, function(err, result) {
-    if(err)
-	{   // throw err;
-		console.log("error:");
-		console.log(err.message);
-		res.status(404);
-		res.json({"error": err.message});		
-	}       
-    if(!err) 
-       console.log("student entry saved");
-   	   res.status(200);
-	   res.json(result);	    
+			 
+			return res.json({msg :err.message });
+		  });		
 	});	
-
-
-		
-	}
-	else
-	{
-			res.status(404);
-			return res.json({"msg": "too many students"});		
-	}
  
-
-	});		
- 
- 	
- 	
-	
-});	
-
-app.post('/api/v1/student', function(req, res) {   // update a student THIS SHOULD BE PUT, swap
+app.post('/api/v1/student', function(req, res) {   // promises - update a student THIS SHOULD BE PUT, swap
     console.log('POST /api/v1/student');
 	console.log(req.body);	
 	var _id = req.body._id;
-	delete req.body._id;
-	myCollections.students.update({"_id" : ObjectID(_id)},req.body,{}, function(err, result) {
-    if(err)
-	{ 	// throw err;
-		console.log("error:");
-		console.log(err.message);
-		res.status(404);
-		res.json({"error": err.message});		
-	}        
-    if(!err) 
-       console.log("student entry saved");
-   	   res.status(200);
-	   res.json(result);	    
-	});	
+	delete req.body._id;  // NB, its put back as part of the update, in the sense that it is not touched
+	
+	myCollections.students.update({"_id" : ObjectID(_id)},req.body)
+		  .then( result => {
+			   console.log("student entry saved");
+			   res.status(200);
+			   res.json(result);	 
+		  })
+		  .catch ( err => {
+				console.log("error:");
+				console.log(err.message);
+				res.status(404);
+				res.json({"error": err.message});	
+		  });		
+ 
 });
 	
-app.get('/api/v1/students', function(req, res) { // allows a browser url call 
+app.get('/api/v1/students', function(req, res) { // promises - allows a browser url call 
     console.log('GET /api/v1/students');
 	 
 	var findOptions = {};
@@ -311,7 +249,7 @@ app.get('/api/v1/students', function(req, res) { // allows a browser url call
 	getStudents(req,res,findOptions);
 });
 
-app.post('/api/v1/students', function(req, res) { // need the post method to pass filters in the body  
+app.post('/api/v1/students', function(req, res) { // pomises - need the post method to pass filters in the body  
     console.log('POST /api/v1/students');
 	 
 	var findOptions = {};
@@ -329,7 +267,7 @@ app.post('/api/v1/students', function(req, res) { // need the post method to pas
 	getStudents(req,res,findOptions);
 });
 
-app.post('/api/v1/loadstudents', function(req, res) { // API restful semantic issues i.e. loadstudents
+app.post('/api/v1/loadstudents', function(req, res) { // promise - API restful semantic issues i.e. loadstudents
     console.log('POST /api/v1/loadstudents');	 
 	
 	// only insert if max < 100
@@ -358,78 +296,57 @@ app.post('/api/v1/loadstudents', function(req, res) { // API restful semantic is
 	 
 	var errorFlag = false;  // can use for feedback
 	var insertCount = 0;
-	
-	
-  	findStudents( {},  function(err, results) {	 
-	if(err)
-		{	// throw err;
+ 
+	findStudents({}) // find the total number of existing students, DOES NOT SCALE WELL, STORE COUNT IN DB
+		  .then( results => {
+			  
+					console.log("total students so far: " + results.length);
+					if (results.length < 100)
+					{
+						myCollections.students.insertMany(records)
+								  .then( result => {
+									//	console.log(result)
+										res.status(200);
+										return res.json(result);	
+								  })
+								  .catch ( err => {
+									console.log(err);
+									res.status(404);
+									return res.json({});
+								  });							  
+					}
+					else 
+					{
+						console.log("too many students if this load went ahead");
+						res.status(404);
+						return res.json({"msg": "too many students if this load went ahead"});	
+					}
+		  })
+		  .catch ( err => {
 			console.log("error:");
 			console.log(err.message);
 			res.status(404);
-			res.json({"error": err.message});
-		} 
-
-	console.log("total students so far: " + results.length);
-	
-	if (results.length < 100)
-	{
-		// add this set of students
-		
-		records.forEach( function (arrayItem)
-		{
-			myCollections.students.insert( arrayItem, function(err, result) {
-				if(err)
-				{
-					errorFlag = true;
-				}
-				insertCount++;
-			});
-		});		
-
-	// BAD
- 
-	// need to turn this into promises
-	// this would need to be set after confirmation of the loop which has aysnch call
-	
-	console.log("EXPLAIN WHY THIS IS WRONG, insertCount is not available yet!!!!");
-	var result = {'errorFlag' : errorFlag , 'insertCount' : insertCount};
- 
-	console.log(result)
-	res.status(200);
-	res.json(result);
-
-
-		
-	}
-	else
-	{
-			res.status(404);
-			return res.json({"msg": "too many students"});		
-	}
- 
-
-	});		
- 
- 
+			return res.json({"error": err.message});
+		  });		
 });
 
 app.delete('/api/v1/deletestudents', function(req, res) {  
     console.log('DELETE /api/v1/loadstudents');
 	var errorFlag = false;  // can use for feedback
-	try {
-		myCollections.students.deleteMany( {}, function(err, result)
-		{
-		  var resJSON = JSON.stringify(result);
-			console.log(resJSON);
-			console.log(result.result.n);
-			res.status(200);
-			res.json(resJSON);			
-		});
-	} catch (e) {
-			console.log(e);
+	 
+		myCollections.students.deleteMany({})
+		  .then( result => {
+				var resJSON = JSON.stringify(result);
+				console.log(resJSON);
+				console.log(result.result.n);
+				res.status(200);
+				res.json(resJSON);	
+		  })
+		  .catch ( err => {
+			console.log(err);
 			res.status(404);
-			res.json({});			   
-	}	
+			res.json({});
+		  });	    	
 });
 
 // if all the server rest type route paths are mapped in index.js
