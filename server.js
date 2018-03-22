@@ -151,6 +151,12 @@ function findStudents(findOptions, cb) {  // promise returned
         return myCollections.students.find(findOptions).toArray(cb);
     }
  
+ 
+function countStudents(findOptions) {  // promise returned
+        return myCollections.students.count(findOptions) ; // does a count not a find
+    }
+
+ 
 function getStudents(req, res, findOptions, cb) { // promises
 	
 	findStudents( findOptions)
@@ -189,10 +195,11 @@ app.put('/api/v1/student', function(req, res) {   // promises - one single stude
     console.log('PUT /api/v1/student');
 	console.log(req.body);
 	
-	findStudents({})
-		  .then( results => {
-			console.log("total students so far: " + results.length);	 
-			if (results.length < 119)
+	countStudents({}) 
+		  .then( stdCount => {
+			console.log(stdCount);
+			console.log("total students so far: " + stdCount);	 
+			if (stdCount < 119)
 				{
 					// add one student
  
@@ -297,11 +304,11 @@ app.post('/api/v1/loadstudents', function(req, res) { // promise - API restful s
 	var errorFlag = false;  // can use for feedback
 	var insertCount = 0;
  
-	findStudents({}) // find the total number of existing students, DOES NOT SCALE WELL, STORE COUNT IN DB
-		  .then( results => {
-			  
-					console.log("total students so far: " + results.length);
-					if (results.length < 100)
+	countStudents({})  // find the total number of existing students, DOES NOT SCALE WELL, STORE COUNT IN DB
+		  .then( stdCount => {
+console.log(stdCount);			  
+					console.log("total students so far: " + stdCount);
+					if (stdCount < 100)
 					{
 						myCollections.students.insertMany(records)
 								  .then( result => {
